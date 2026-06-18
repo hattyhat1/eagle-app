@@ -6,7 +6,7 @@
 // ============================================================================
 
 import * as THREE from 'three';
-import { WORLD } from './constants.js';
+import { WORLD, BLOOM_LAYER } from './constants.js';
 
 const COIN_VALUE = 2;        // coins awarded per pickup
 const COIN_RADIUS = 0.42;
@@ -24,12 +24,12 @@ export class CoinManager {
     this.geo = new THREE.CylinderGeometry(COIN_RADIUS, COIN_RADIUS, 0.1, 20);
     this.mat = new THREE.MeshStandardMaterial({
       color: 0xffcf40, metalness: 0.5, roughness: 0.2,
-      emissive: 0xffb000, emissiveIntensity: 0.45,
+      emissive: 0xffb000, emissiveIntensity: 0.25,
     });
     this.starGeo = this._starGeo();
     this.starMat = new THREE.MeshStandardMaterial({
       color: 0xfff2b0, metalness: 0.4, roughness: 0.25,
-      emissive: 0xffcf40, emissiveIntensity: 0.6,
+      emissive: 0xffcf40, emissiveIntensity: 0.3,
     });
   }
 
@@ -54,9 +54,11 @@ export class CoinManager {
       const group = new THREE.Group();
       const disc = new THREE.Mesh(this.geo, this.mat);
       disc.rotation.x = Math.PI / 2; // face the camera
+      disc.layers.enable(BLOOM_LAYER);
       group.add(disc);
       const star = new THREE.Mesh(this.starGeo, this.starMat);
       star.position.z = 0.05;
+      star.layers.enable(BLOOM_LAYER);
       group.add(star);
       this.scene.add(group);
       c = { group, collected: false, bob: 0 };

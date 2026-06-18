@@ -132,6 +132,7 @@ Everything you'd want to change lives in **`js/constants.js`**:
 | `OBSTACLES.SPAWN_INTERVAL` | Seconds between pillars |
 | `SCORING.DIFFICULTY_STEP` | Ramp difficulty every N points |
 | `SPECTACLE_LEVEL` | `'subtle'` · `'standard'` · `'maximum'` |
+| `ENABLE_BLOOM` | Experimental glow post-processing (off by default) |
 
 `SPECTACLE_LEVEL` scales (or disables) all the over-the-top flourishes —
 fireworks, confetti, eagle trail, screech frequency, slow-mo — without touching
@@ -162,6 +163,11 @@ any gameplay code.
   plus an optional real-money coin tab; all progress saved locally.
 - Reflection environment map so gold/coins/metals look genuinely shiny, plus
   ACES tone mapping for richer color.
+- Detailed, smooth-shaded eagle (cheek puffs, swept crest, big expressive eyes),
+  hemisphere + rim lighting for depth, soft 2K shadows, and a cinematic vignette.
+- Optional selective-bloom pipeline (`js/postfx.js`, vendored Three.js addons),
+  toggled by `ENABLE_BLOOM` — off by default because the crisp direct render
+  looks better on this stylized scene.
 
 No external paid assets, no copyrighted imagery — original flag-inspired art
 generated procedurally.

@@ -9,7 +9,7 @@
 
 import * as THREE from 'three';
 import {
-  STATE, COLORS, WORLD, SCORING, STORAGE_KEY, SPECTACLE,
+  STATE, COLORS, WORLD, SCORING, STORAGE_KEY, SPECTACLE, ENABLE_BLOOM,
 } from './constants.js';
 import { Eagle } from './eagle.js';
 import { ObstacleManager } from './obstacles.js';
@@ -21,6 +21,7 @@ import { AudioManager } from './audio.js';
 import { InputManager } from './input.js';
 import { PlayerStore } from './store.js';
 import { ShopUI } from './shop.js';
+import { PostFX } from './postfx.js';
 
 export class GameManager {
   constructor(canvas) {
@@ -46,6 +47,7 @@ export class GameManager {
     this._initRenderer();
     this._initScene();
     this._initSubsystems();
+    this.postfx = ENABLE_BLOOM ? new PostFX(this.renderer, this.scene, this.camera) : null;
     this._bindWindow();
 
     // Credit any real-money coin purchase returning from Stripe.
@@ -73,8 +75,10 @@ export class GameManager {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    // ACES is applied once: by OutputPass at the end of the composer chain, or
+    // by the renderer directly in the no-postfx fallback path.
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.05;
+    this.renderer.toneMappingExposure = 1.0;
     this.renderer.setSize(window.innerWidth, window.innerHeight);
   }
 
@@ -91,21 +95,32 @@ export class GameManager {
     this.camera.lookAt(0, WORLD.CAMERA_Y, 0);
     this.cameraBaseY = WORLD.CAMERA_Y;
 
-    this.ambient = new THREE.AmbientLight(0xffffff, 0.7);
+    // Hemisphere light gives a natural sky→ground colour gradient.
+    this.hemi = new THREE.HemisphereLight(0xcfe8ff, 0x4a6b3a, 0.55);
+    this.scene.add(this.hemi);
+
+    this.ambient = new THREE.AmbientLight(0xffffff, 0.45);
     this.scene.add(this.ambient);
 
-    this.sun = new THREE.DirectionalLight(0xfff0c8, 1.1);
+    this.sun = new THREE.DirectionalLight(0xfff0c8, 1.2);
     this.sun.position.set(6, 14, 10);
     this.sun.castShadow = true;
-    this.sun.shadow.mapSize.set(1024, 1024);
-    this.sun.shadow.camera.left = -12; this.sun.shadow.camera.right = 12;
-    this.sun.shadow.camera.top = 12; this.sun.shadow.camera.bottom = -12;
+    this.sun.shadow.mapSize.set(2048, 2048);
+    this.sun.shadow.radius = 5;            // softer PCF edges
+    this.sun.shadow.bias = -0.0004;
+    this.sun.shadow.camera.left = -14; this.sun.shadow.camera.right = 14;
+    this.sun.shadow.camera.top = 14; this.sun.shadow.camera.bottom = -14;
     this.sun.shadow.camera.near = 1; this.sun.shadow.camera.far = 50;
     this.scene.add(this.sun);
 
-    this.fill = new THREE.DirectionalLight(0xbcd8ff, 0.35);
+    this.fill = new THREE.DirectionalLight(0xbcd8ff, 0.3);
     this.fill.position.set(-8, 4, 6);
     this.scene.add(this.fill);
+
+    // Rim/back light to give the eagle a heroic edge highlight.
+    this.rim = new THREE.DirectionalLight(0xffe6b0, 0.6);
+    this.rim.position.set(-6, 6, -10);
+    this.scene.add(this.rim);
   }
 
   _makeEnvMap() {
@@ -180,14 +195,22 @@ export class GameManager {
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    if (this.postfx) this.postfx.setSize(w, h);
+  }
+
+  _render() {
+    if (this.postfx && this.postfx.enabled) this.postfx.render();
+    else this.renderer.render(this.scene, this.camera);
   }
 
   // --------------------------------------------------------------------------
   //  COSMETICS
   // --------------------------------------------------------------------------
   _applyThemeLighting(theme) {
-    this.ambient.intensity = theme.ambient;
+    this.ambient.intensity = theme.ambient * 0.65;
+    this.hemi.intensity = theme.ambient * 0.8;
     this.sun.intensity = theme.sunInt;
+    this.rim.intensity = (theme.night || theme.space) ? 0.35 : 0.6;
   }
 
   _applyEquip(category, item) {
@@ -372,7 +395,7 @@ export class GameManager {
   _loop() {
     requestAnimationFrame(() => this._loop());
     let dt = this.clock.getDelta();
-    if (this.paused || this.shop.isOpen) { this.renderer.render(this.scene, this.camera); return; }
+    if (this.paused || this.shop.isOpen) { this._render(); return; }
     dt = Math.min(dt, 0.05);
 
     this.timeScale += (this.targetTimeScale - this.timeScale) * Math.min(1, dt * 8);
@@ -387,7 +410,7 @@ export class GameManager {
     else if (this.state === STATE.GAME_OVER) this.eagle.update(sdt);
 
     this._updateCamera(dt);
-    this.renderer.render(this.scene, this.camera);
+    this._render();
   }
 
   // Occasional background fireworks for the night theme.

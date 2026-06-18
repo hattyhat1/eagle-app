@@ -147,3 +147,12 @@ export const SCORING = Object.freeze({
 // ---------------------------------------------------------------------------
 export const STORAGE_KEY = 'americanEagle.bestScore.v1';
 export const MUTE_KEY = 'americanEagle.muted.v1';
+
+// Render layer reserved for selective bloom — objects with this layer enabled
+// (coins, neon pillars, fireworks, stars) are the ones that would glow.
+export const BLOOM_LAYER = 1;
+
+// Bloom post-processing is implemented (js/postfx.js) but OFF by default: the
+// EffectComposer path softened/washed the colours on this stylized scene, and a
+// crisp direct render looks better. Flip to true to experiment with the glow.
+export const ENABLE_BLOOM = false;

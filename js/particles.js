@@ -6,7 +6,7 @@
 // ============================================================================
 
 import * as THREE from 'three';
-import { COLORS, SPECTACLE } from './constants.js';
+import { COLORS, SPECTACLE, BLOOM_LAYER } from './constants.js';
 import { TRAILS } from './cosmetics.js';
 
 const RWB = [COLORS.RED, COLORS.WHITE, COLORS.BLUE, COLORS.GOLD];
@@ -67,6 +67,7 @@ export class ParticleSystem {
         transparent: true, side: THREE.DoubleSide,
       });
       const mesh = new THREE.Mesh(geo, mat);
+      mesh.layers.enable(BLOOM_LAYER); // particles glow
       p = new P(mesh);
     }
     p.mesh.geometry = geo;

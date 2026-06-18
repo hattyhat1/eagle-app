@@ -34,31 +34,49 @@ export class Eagle {
   // --------------------------------------------------------------------------
   _build() {
     const mat = (color, opts = {}) => new THREE.MeshStandardMaterial({
-      color, roughness: 0.6, metalness: 0.05, flatShading: true, ...opts,
+      color, roughness: 0.55, metalness: 0.05, flatShading: false, ...opts,
     });
 
-    // Body — rounded form
+    // Body — smooth rounded form
     this.mats.body = mat(COLORS.EAGLE_BODY);
-    const body = new THREE.Mesh(new THREE.SphereGeometry(0.7, 20, 16), this.mats.body);
-    body.scale.set(1.15, 0.95, 0.9);
+    const body = new THREE.Mesh(new THREE.SphereGeometry(0.7, 32, 24), this.mats.body);
+    body.scale.set(1.15, 0.98, 0.92);
     body.castShadow = true;
     this.group.add(body);
 
-    // Belly highlight
+    // Chest/belly highlight
     this.mats.belly = mat(COLORS.EAGLE_BODY_DARK);
-    const belly = new THREE.Mesh(new THREE.SphereGeometry(0.55, 16, 12), this.mats.belly);
-    belly.scale.set(1.0, 0.8, 0.85);
-    belly.position.set(-0.05, -0.15, 0.12);
+    const belly = new THREE.Mesh(new THREE.SphereGeometry(0.56, 24, 18), this.mats.belly);
+    belly.scale.set(1.0, 0.82, 0.88);
+    belly.position.set(0.02, -0.16, 0.16);
     this.group.add(belly);
 
     // Feathered head
     this.mats.head = mat(COLORS.EAGLE_HEAD);
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.52, 20, 16), this.mats.head);
-    head.position.set(0.55, 0.35, 0);
-    head.scale.set(1.0, 1.0, 0.95);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.52, 32, 24), this.mats.head);
+    head.position.set(0.55, 0.37, 0);
+    head.scale.set(1.0, 1.02, 0.96);
     head.castShadow = true;
     this.group.add(head);
     this.head = head;
+
+    // Cheek feather puffs for a cuter, fuller head
+    [0.32, -0.32].forEach((z) => {
+      const cheek = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 12), this.mats.head);
+      cheek.position.set(0.5, 0.22, z);
+      cheek.scale.set(0.9, 0.8, 0.9);
+      this.group.add(cheek);
+    });
+
+    // Swept-back head crest
+    const crest = new THREE.Group();
+    for (let i = 0; i < 3; i++) {
+      const tuft = new THREE.Mesh(new THREE.SphereGeometry(0.13, 12, 10), this.mats.head);
+      tuft.position.set(0.2 - i * 0.12, 0.62 - i * 0.05, 0);
+      tuft.scale.set(1.1, 0.6, 0.9);
+      crest.add(tuft);
+    }
+    this.group.add(crest);
 
     // Beak — hooked cone
     this.mats.beak = mat(COLORS.BEAK, { metalness: 0.2 });
@@ -107,18 +125,22 @@ export class Eagle {
 
   _addEye(x, y, z) {
     const mk = (color, opts) => new THREE.MeshStandardMaterial({ color, ...opts });
-    const white = new THREE.Mesh(new THREE.SphereGeometry(0.14, 12, 10), mk(0xffffff, { roughness: 0.3 }));
+    const white = new THREE.Mesh(new THREE.SphereGeometry(0.17, 16, 14), mk(0xffffff, { roughness: 0.25 }));
     white.position.set(x, y, z);
+    white.scale.set(1, 1.05, 1);
     this.group.add(white);
-    const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.07, 10, 8), mk(COLORS.PUPIL, { roughness: 0.2 }));
-    pupil.position.set(x + 0.08, y, z);
+    const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.095, 14, 12), mk(COLORS.PUPIL, { roughness: 0.15 }));
+    pupil.position.set(x + 0.1, y, z);
     this.group.add(pupil);
-    const glint = new THREE.Mesh(new THREE.SphereGeometry(0.025, 6, 6), mk(0xffffff, { emissive: 0xffffff, emissiveIntensity: 0.8 }));
-    glint.position.set(x + 0.12, y + 0.04, z + 0.03);
+    const glint = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 8), mk(0xffffff, { emissive: 0xffffff, emissiveIntensity: 1.0 }));
+    glint.position.set(x + 0.15, y + 0.06, z + 0.04);
     this.group.add(glint);
-    const brow = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.05, 0.18), mk(COLORS.EAGLE_BODY_DARK, { roughness: 0.7 }));
-    brow.position.set(x + 0.02, y + 0.14, z);
-    brow.rotation.z = -0.25;
+    const glint2 = new THREE.Mesh(new THREE.SphereGeometry(0.018, 6, 6), mk(0xffffff, { emissive: 0xffffff, emissiveIntensity: 0.9 }));
+    glint2.position.set(x + 0.14, y - 0.05, z + 0.05);
+    this.group.add(glint2);
+    const brow = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.06, 0.2), mk(COLORS.EAGLE_BODY_DARK, { roughness: 0.7 }));
+    brow.position.set(x + 0.02, y + 0.17, z);
+    brow.rotation.z = -0.28;
     this.group.add(brow);
   }
 

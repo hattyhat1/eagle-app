@@ -6,7 +6,7 @@
 // ============================================================================
 
 import * as THREE from 'three';
-import { COLORS, WORLD, OBSTACLES, SCORING } from './constants.js';
+import { COLORS, WORLD, OBSTACLES, SCORING, BLOOM_LAYER } from './constants.js';
 import { PILLARS } from './cosmetics.js';
 
 // --- Texture builders -------------------------------------------------------
@@ -104,6 +104,17 @@ export class ObstacleManager {
       g.userData.shaft.material = this.shaftMat;
       g.userData.cap.material = this.capMat;
       g.userData.lip.material = this.lipMat;
+      this._setBloom(g);
+    }
+  }
+
+  // Neon pillars glow via the bloom pass; other styles do not.
+  _setBloom(group) {
+    const on = this.style.type === 'neon';
+    for (const key of ['shaft', 'cap', 'lip']) {
+      const mesh = group.userData[key];
+      if (on) mesh.layers.enable(BLOOM_LAYER);
+      else mesh.layers.disable(BLOOM_LAYER);
     }
   }
 
@@ -160,6 +171,7 @@ export class ObstacleManager {
     group.add(lip); group.userData.lip = lip;
 
     group.userData.isTop = isTop;
+    this._setBloom(group);
     this.allGroups.push(group);
     return group;
   }

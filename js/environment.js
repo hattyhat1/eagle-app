@@ -7,7 +7,7 @@
 // ============================================================================
 
 import * as THREE from 'three';
-import { COLORS, WORLD } from './constants.js';
+import { COLORS, WORLD, BLOOM_LAYER } from './constants.js';
 import { BACKGROUNDS } from './cosmetics.js';
 
 export class Environment {
@@ -92,6 +92,8 @@ export class Environment {
     const sunGroup = new THREE.Group();
     sunGroup.position.set(7, 6, -24);
 
+    // The sun has its own halo + god-rays; keeping it OUT of the bloom pass
+    // prevents the whole screen from washing out.
     const sun = new THREE.Mesh(new THREE.CircleGeometry(3.4, 48),
       new THREE.MeshBasicMaterial({ color: t.sun, fog: false }));
     sunGroup.add(sun);
@@ -261,6 +263,7 @@ export class Environment {
     const stars = new THREE.Points(geo, new THREE.PointsMaterial({
       color: 0xffffff, size: 0.28, sizeAttenuation: true, transparent: true, opacity: 0.95, fog: false,
     }));
+    stars.layers.enable(BLOOM_LAYER); // stars twinkle/glow
     this.stars = stars;
     this.root.add(stars);
   }
