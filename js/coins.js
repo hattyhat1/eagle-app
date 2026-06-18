@@ -81,9 +81,8 @@ export class CoinManager {
     const spread = 1.0;
     for (let i = 0; i < n; i++) {
       const c = this._acquire();
-      const t = (i - (n - 1) / 2) / Math.max(1, n - 1); // -0.5..0.5
-      c.group.position.set(x, gapCenter + Math.cos(t * Math.PI) * 0.4 - 0.0, 0.4);
-      c.group.position.y = gapCenter + (i - (n - 1) / 2) * spread;
+      const y = gapCenter + (i - (n - 1) / 2) * spread;
+      c.group.position.set(x, y, 0.4);
       c.bob = Math.random() * Math.PI * 2;
     }
   }
