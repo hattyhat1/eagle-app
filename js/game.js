@@ -1,9 +1,10 @@
 // ============================================================================
 //  game.js — GameManager
 //  The central conductor. Owns the Three.js scene/camera/renderer, all
-//  subsystems (eagle, obstacles, environment, particles, UI, audio, input),
-//  the MENU / PLAYING / GAME_OVER state machine, the game loop, scoring,
-//  milestones, collisions, screen shake, slow-mo, and pause/resume.
+//  subsystems (eagle, obstacles, coins, environment, particles, UI, audio,
+//  input, store, shop), the MENU / PLAYING / GAME_OVER state machine, the game
+//  loop, scoring, coins, milestones, collisions, screen shake, slow-mo, and
+//  pause/resume.
 // ============================================================================
 
 import * as THREE from 'three';
@@ -12,26 +13,33 @@ import {
 } from './constants.js';
 import { Eagle } from './eagle.js';
 import { ObstacleManager } from './obstacles.js';
+import { CoinManager } from './coins.js';
 import { Environment } from './environment.js';
 import { ParticleSystem } from './particles.js';
 import { UIManager } from './ui.js';
 import { AudioManager } from './audio.js';
 import { InputManager } from './input.js';
+import { PlayerStore } from './store.js';
+import { ShopUI } from './shop.js';
 
 export class GameManager {
   constructor(canvas) {
     this.canvas = canvas;
     this.state = STATE.MENU;
     this.score = 0;
+    this.runCoins = 0;
     this.best = parseInt(localStorage.getItem(STORAGE_KEY) || '0', 10) || 0;
 
+    this.store = new PlayerStore();
+
     this.clock = new THREE.Clock();
-    this.timeScale = 1;        // for slow-mo beats
+    this.timeScale = 1;
     this.targetTimeScale = 1;
-    this.shake = 0;            // screen-shake magnitude
+    this.shake = 0;
     this.paused = false;
-    this.introTimer = 1.8;     // cinematic fly-in duration
+    this.introTimer = 1.8;
     this.trailTimer = 0;
+    this.ambientFwTimer = 3;
 
     this._tmp = new THREE.Vector3();
 
@@ -40,7 +48,17 @@ export class GameManager {
     this._initSubsystems();
     this._bindWindow();
 
-    // Enter menu (with cinematic intro).
+    // Credit any real-money coin purchase returning from Stripe.
+    const credited = this.store.redeemFromUrl();
+    this.ui.setCoins(this.store.coins);
+    if (credited) {
+      setTimeout(() => {
+        this.audio.unlock(); this.audio.purchase();
+        this.ui.popCoins();
+        this.particles.fireworksShow(4);
+      }, 600);
+    }
+
     this._enterMenu(true);
     this._loop();
   }
@@ -55,13 +73,17 @@ export class GameManager {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = 1.05;
     this.renderer.setSize(window.innerWidth, window.innerHeight);
   }
 
   _initScene() {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(COLORS.SKY_BOTTOM);
-    this.scene.fog = new THREE.Fog(COLORS.SKY_BOTTOM, 30, 60);
+    // A soft gradient reflection map so metallic gold/coins/lips read as shiny
+    // instead of dark (MeshStandardMaterial needs something to reflect).
+    this.scene.environment = this._makeEnvMap();
 
     this.camera = new THREE.PerspectiveCamera(
       45, window.innerWidth / window.innerHeight, 0.1, 200);
@@ -69,41 +91,71 @@ export class GameManager {
     this.camera.lookAt(0, WORLD.CAMERA_Y, 0);
     this.cameraBaseY = WORLD.CAMERA_Y;
 
-    // Lighting: soft ambient + warm directional sun with shadows.
-    this.scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-    const sun = new THREE.DirectionalLight(0xfff0c8, 1.1);
-    sun.position.set(6, 14, 10);
-    sun.castShadow = true;
-    sun.shadow.mapSize.set(1024, 1024);
-    sun.shadow.camera.left = -12;
-    sun.shadow.camera.right = 12;
-    sun.shadow.camera.top = 12;
-    sun.shadow.camera.bottom = -12;
-    sun.shadow.camera.near = 1;
-    sun.shadow.camera.far = 50;
-    this.scene.add(sun);
-    const fill = new THREE.DirectionalLight(0xbcd8ff, 0.35);
-    fill.position.set(-8, 4, 6);
-    this.scene.add(fill);
+    this.ambient = new THREE.AmbientLight(0xffffff, 0.7);
+    this.scene.add(this.ambient);
+
+    this.sun = new THREE.DirectionalLight(0xfff0c8, 1.1);
+    this.sun.position.set(6, 14, 10);
+    this.sun.castShadow = true;
+    this.sun.shadow.mapSize.set(1024, 1024);
+    this.sun.shadow.camera.left = -12; this.sun.shadow.camera.right = 12;
+    this.sun.shadow.camera.top = 12; this.sun.shadow.camera.bottom = -12;
+    this.sun.shadow.camera.near = 1; this.sun.shadow.camera.far = 50;
+    this.scene.add(this.sun);
+
+    this.fill = new THREE.DirectionalLight(0xbcd8ff, 0.35);
+    this.fill.position.set(-8, 4, 6);
+    this.scene.add(this.fill);
+  }
+
+  _makeEnvMap() {
+    const c = document.createElement('canvas');
+    c.width = 64; c.height = 32;
+    const ctx = c.getContext('2d');
+    const g = ctx.createLinearGradient(0, 0, 0, 32);
+    g.addColorStop(0, '#dff1ff');
+    g.addColorStop(0.5, '#ffffff');
+    g.addColorStop(1, '#ffe9c0');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 64, 32);
+    const tex = new THREE.CanvasTexture(c);
+    tex.mapping = THREE.EquirectangularReflectionMapping;
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
   }
 
   _initSubsystems() {
-    this.environment = new Environment(this.scene);
-    this.particles = new ParticleSystem(this.scene);
+    const eq = (c) => this.store.getEquipped(c);
 
-    this.eagle = new Eagle();
+    this.environment = new Environment(this.scene, eq('background'));
+    this._applyThemeLighting(eq('background'));
+    this.particles = new ParticleSystem(this.scene);
+    this.particles.setTrailStyle(eq('trail'));
+
+    this.eagle = new Eagle(eq('eagle'));
     this.scene.add(this.eagle.group);
 
-    this.obstacles = new ObstacleManager(this.scene);
+    this.obstacles = new ObstacleManager(this.scene, eq('pillar'));
     this.obstacles.onScore = () => this._onScore();
+    this.obstacles.onSpawn = (x, gapCenter) => this.coins.spawnArc(x, gapCenter);
+
+    this.coins = new CoinManager(this.scene);
+    this.coins.onCollect = (value, pos) => this._onCoin(value, pos);
 
     this.audio = new AudioManager();
 
+    this.shop = new ShopUI(this.store, this.audio, {
+      onEquip: (cat, item) => this._applyEquip(cat, item),
+      onCoins: (n) => this.ui.setCoins(n),
+    });
+
     this.ui = new UIManager({
       onMuteToggle: () => this.audio.toggleMute(),
+      onShop: () => this._openShop(),
     });
     this.ui.setMuteIcon(this.audio.muted);
     this.ui.setScore(0);
+    this.ui.setCoins(this.store.coins);
 
     this.input = new InputManager(this.canvas.parentElement || document.body);
     this.input.onAction(() => this._handleAction());
@@ -112,10 +164,9 @@ export class GameManager {
 
   _bindWindow() {
     window.addEventListener('resize', () => this._onResize());
-    // Pause when the tab/page loses focus; resume on return.
     document.addEventListener('visibilitychange', () => {
       this.paused = document.hidden;
-      if (!this.paused) this.clock.getDelta(); // discard the gap
+      if (!this.paused) this.clock.getDelta();
     });
     window.addEventListener('blur', () => { this.paused = true; });
     window.addEventListener('focus', () => { this.paused = false; this.clock.getDelta(); });
@@ -124,8 +175,6 @@ export class GameManager {
   _onResize() {
     const w = window.innerWidth, h = window.innerHeight;
     this.camera.aspect = w / h;
-    // Pull the camera back a touch on narrow (portrait) screens so the play
-    // lane stays fully visible on phones.
     const portrait = h > w;
     this.camera.position.z = portrait ? WORLD.CAMERA_Z + 7 : WORLD.CAMERA_Z;
     this.camera.updateProjectionMatrix();
@@ -134,10 +183,35 @@ export class GameManager {
   }
 
   // --------------------------------------------------------------------------
+  //  COSMETICS
+  // --------------------------------------------------------------------------
+  _applyThemeLighting(theme) {
+    this.ambient.intensity = theme.ambient;
+    this.sun.intensity = theme.sunInt;
+  }
+
+  _applyEquip(category, item) {
+    if (category === 'eagle') this.eagle.applySkin(item);
+    else if (category === 'trail') this.particles.setTrailStyle(item);
+    else if (category === 'pillar') this.obstacles.setStyle(item);
+    else if (category === 'background') {
+      this.environment.setTheme(item);
+      this._applyThemeLighting(item);
+    }
+  }
+
+  _openShop() {
+    if (this.state === STATE.PLAYING) return; // only from menu / game over
+    this.audio.unlock();
+    this.shop.open();
+  }
+
+  // --------------------------------------------------------------------------
   //  STATE MACHINE
   // --------------------------------------------------------------------------
   _handleAction() {
-    // First gesture unlocks audio (and fires the title fanfare).
+    if (this.shop.isOpen) return; // shop handles its own taps
+
     const firstUnlock = !this.audio._unlocked;
     this.audio.unlock();
 
@@ -150,7 +224,6 @@ export class GameManager {
         this._flap();
         break;
       case STATE.GAME_OVER:
-        // Guard against instantly restarting on the same tap that killed us.
         if (this._gameOverLock) return;
         this._restart();
         break;
@@ -160,17 +233,19 @@ export class GameManager {
   _enterMenu(intro = false) {
     this.state = STATE.MENU;
     this.score = 0;
+    this.runCoins = 0;
     this.obstacles.stop();
     this.obstacles.clear();
+    this.coins.clear();
     this.particles.clear();
     this.eagle.reset();
     this.ui.setScore(0);
     this.ui.showScore(false);
     this.ui.hideGameOver();
     this.ui.showMenu(this.best);
+    this.ui.showShopButton(true);
     if (intro) {
       this.introTimer = 1.8;
-      // Eagle swoops in from the distant horizon.
       this.eagle.group.position.set(WORLD.SPAWN_X + 4, 5, -10);
     } else {
       this.introTimer = 0;
@@ -178,37 +253,27 @@ export class GameManager {
     }
   }
 
-  _startGame() {
-    this.ui.transition(() => {
-      this.state = STATE.PLAYING;
-      this.score = 0;
-      this.ui.setScore(0);
-      this.ui.hideMenu();
-      this.ui.hideIntro();
-      this.ui.hideGameOver();
-      this.ui.showScore(true);
-      this.eagle.reset();
-      this.obstacles.start();
-      this.obstacles.applyDifficulty(0);
-      this._flap(); // give a first lift so the player doesn't instantly drop
-    });
+  _beginRun() {
+    this.state = STATE.PLAYING;
+    this.score = 0;
+    this.runCoins = 0;
+    this.ui.setScore(0);
+    this.ui.hideMenu();
+    this.ui.hideIntro();
+    this.ui.hideGameOver();
+    this.ui.showScore(true);
+    this.ui.showShopButton(false);
+    this.particles.clear();
+    this.eagle.reset();
+    this.coins.clear();
+    this.obstacles.clear();
+    this.obstacles.start();
+    this.obstacles.applyDifficulty(0);
+    this._flap();
   }
 
-  _restart() {
-    this.ui.transition(() => {
-      this.state = STATE.PLAYING;
-      this.score = 0;
-      this.ui.setScore(0);
-      this.ui.hideGameOver();
-      this.ui.showScore(true);
-      this.particles.clear();
-      this.eagle.reset();
-      this.obstacles.clear();
-      this.obstacles.start();
-      this.obstacles.applyDifficulty(0);
-      this._flap();
-    });
-  }
+  _startGame() { this.ui.transition(() => this._beginRun()); }
+  _restart() { this.ui.transition(() => this._beginRun()); }
 
   _flap() {
     this.eagle.flap();
@@ -219,7 +284,7 @@ export class GameManager {
   }
 
   // --------------------------------------------------------------------------
-  //  SCORING
+  //  SCORING & COINS
   // --------------------------------------------------------------------------
   _onScore() {
     this.score += 1;
@@ -227,17 +292,20 @@ export class GameManager {
     this.ui.popScore();
     this.audio.score();
 
-    // Star-burst pop just ahead of the eagle.
     this._tmp.set(this.eagle.group.position.x + 1, this.eagle.group.position.y, 0.5);
     this.particles.scoreBurst(this._tmp);
-
-    // Difficulty ramps every few points.
     this.obstacles.applyDifficulty(this.score);
 
-    // Milestone payoff every 10 points.
-    if (this.score % SCORING.MILESTONE_EVERY === 0) {
-      this._milestone();
-    }
+    if (this.score % SCORING.MILESTONE_EVERY === 0) this._milestone();
+  }
+
+  _onCoin(value, pos) {
+    this.runCoins += value;
+    this.store.addCoins(value);
+    this.ui.setCoins(this.store.coins);
+    this.ui.popCoins();
+    this.particles.coinPickup(pos);
+    this.audio.coin();
   }
 
   _milestone() {
@@ -271,13 +339,11 @@ export class GameManager {
     this.audio.collision();
     this.audio.gameOver();
 
-    // Impact feedback: shake + feather/star burst.
     this.shake = 0.6;
     this._tmp.copy(this.eagle.group.position);
     this.particles.collisionBurst(this._tmp);
     if (SPECTACLE.slowMo) this._slowMo(0.25, 0.5);
 
-    // Lock restart briefly so the killing tap doesn't immediately restart.
     this._gameOverLock = true;
     setTimeout(() => { this._gameOverLock = false; }, 450);
 
@@ -287,9 +353,10 @@ export class GameManager {
       localStorage.setItem(STORAGE_KEY, String(this.best));
     }
 
-    // Reveal the panel after a short beat so the tumble reads.
     setTimeout(() => {
       this.ui.showScore(false);
+      this.ui.setRunCoins(this.runCoins);
+      this.ui.showShopButton(true);
       this.ui.showGameOver(this.score, this.best, isNewRecord);
       if (isNewRecord) {
         this.audio.newRecord();
@@ -305,36 +372,42 @@ export class GameManager {
   _loop() {
     requestAnimationFrame(() => this._loop());
     let dt = this.clock.getDelta();
-    if (this.paused) { this.renderer.render(this.scene, this.camera); return; }
-    dt = Math.min(dt, 0.05); // clamp big frame gaps
+    if (this.paused || this.shop.isOpen) { this.renderer.render(this.scene, this.camera); return; }
+    dt = Math.min(dt, 0.05);
 
-    // Smooth slow-mo interpolation.
     this.timeScale += (this.targetTimeScale - this.timeScale) * Math.min(1, dt * 8);
     const sdt = dt * this.timeScale;
 
-    this.environment.update(dt); // background runs at real time
+    this.environment.update(dt);
     this.particles.update(dt);
+    this._ambientFireworks(dt);
 
-    if (this.state === STATE.MENU) {
-      this._updateMenu(dt);
-    } else if (this.state === STATE.PLAYING) {
-      this._updatePlaying(sdt);
-    } else if (this.state === STATE.GAME_OVER) {
-      this.eagle.update(sdt);
-    }
+    if (this.state === STATE.MENU) this._updateMenu(dt);
+    else if (this.state === STATE.PLAYING) this._updatePlaying(sdt);
+    else if (this.state === STATE.GAME_OVER) this.eagle.update(sdt);
 
     this._updateCamera(dt);
     this.renderer.render(this.scene, this.camera);
   }
 
+  // Occasional background fireworks for the night theme.
+  _ambientFireworks(dt) {
+    if (!this.environment.theme.night) return;
+    if (this.state === STATE.GAME_OVER) return;
+    this.ambientFwTimer -= dt;
+    if (this.ambientFwTimer <= 0) {
+      this.ambientFwTimer = 2 + Math.random() * 2;
+      this._tmp.set((Math.random() - 0.4) * 14, 3 + Math.random() * 4, -6);
+      this.particles.firework(this._tmp);
+    }
+  }
+
   _updateMenu(dt) {
     if (this.introTimer > 0) {
       this.introTimer -= dt;
-      // Swoop the eagle in from the horizon toward its idle spot.
       const target = new THREE.Vector3(WORLD.EAGLE_X, 0, 0);
       this.eagle.group.position.lerp(target, Math.min(1, dt * 3.2));
-      this.eagle.group.rotation.z = THREE.MathUtils.damp(
-        this.eagle.group.rotation.z, -0.2, 5, dt);
+      this.eagle.group.rotation.z = THREE.MathUtils.damp(this.eagle.group.rotation.z, -0.2, 5, dt);
       this.eagle._setWing(Math.sin(performance.now() * 0.02) * 0.9);
       if (this.introTimer <= 0) this.ui.hideIntro();
     } else {
@@ -345,8 +418,8 @@ export class GameManager {
   _updatePlaying(sdt) {
     this.eagle.update(sdt);
     this.obstacles.update(sdt, this.eagle, 1);
+    this.coins.update(sdt, this.eagle, this.obstacles.speed, 1);
 
-    // Eagle trail emitter.
     this.trailTimer -= sdt;
     if (this.trailTimer <= 0) {
       this.eagle.getTrailAnchor(this._tmp);
@@ -359,18 +432,14 @@ export class GameManager {
   }
 
   _updateCamera(dt) {
-    // Gentle idle float only on the menu; otherwise steady.
     let baseY = this.cameraBaseY;
-    if (this.state === STATE.MENU) {
-      baseY += Math.sin(performance.now() * 0.0008) * 0.3;
-    }
+    if (this.state === STATE.MENU) baseY += Math.sin(performance.now() * 0.0008) * 0.3;
 
-    // Decaying screen shake on impact.
     let ox = 0, oy = 0;
     if (this.shake > 0.001) {
       ox = (Math.random() - 0.5) * this.shake;
       oy = (Math.random() - 0.5) * this.shake;
-      this.shake *= Math.pow(0.001, dt); // fast decay
+      this.shake *= Math.pow(0.001, dt);
       if (this.shake < 0.01) this.shake = 0;
     }
     this.camera.position.x = ox;

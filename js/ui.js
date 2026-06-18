@@ -5,7 +5,7 @@
 // ============================================================================
 
 export class UIManager {
-  constructor({ onMuteToggle } = {}) {
+  constructor({ onMuteToggle, onShop } = {}) {
     this.el = {
       score: document.getElementById('score'),
       menu: document.getElementById('menu'),
@@ -13,21 +13,49 @@ export class UIManager {
       gameover: document.getElementById('gameover'),
       goScore: document.getElementById('go-score'),
       goBest: document.getElementById('go-best'),
+      goCoins: document.getElementById('go-coins'),
       goTitle: document.getElementById('go-title'),
       newRecord: document.getElementById('new-record'),
       milestone: document.getElementById('milestone'),
       mute: document.getElementById('mute'),
+      shopBtn: document.getElementById('shop-btn'),
+      coins: document.getElementById('coins'),
+      coinsValue: document.getElementById('coins-value'),
       transition: document.getElementById('transition'),
       flash: document.getElementById('flash'),
       intro: document.getElementById('intro'),
     };
     this.onMuteToggle = onMuteToggle || (() => {});
+    this.onShop = onShop || (() => {});
 
     this.el.mute.addEventListener('click', (e) => {
       e.stopPropagation();
       const muted = this.onMuteToggle();
       this.setMuteIcon(muted);
     });
+    this.el.shopBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.onShop();
+    });
+  }
+
+  // --- Coins -----------------------------------------------------------------
+  setCoins(n) {
+    this.el.coinsValue.textContent = n;
+  }
+
+  popCoins() {
+    this.el.coins.classList.remove('pop');
+    void this.el.coins.offsetWidth;
+    this.el.coins.classList.add('pop');
+  }
+
+  setRunCoins(n) {
+    if (this.el.goCoins) this.el.goCoins.textContent = n;
+  }
+
+  showShopButton(show) {
+    this.el.shopBtn.classList.toggle('hidden', !show);
   }
 
   setMuteIcon(muted) {

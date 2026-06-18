@@ -20,8 +20,12 @@
     <!-- Big arcade score -->
     <div id="score" class="hidden">0</div>
 
-    <!-- Mute toggle -->
+    <!-- Coin balance HUD -->
+    <div id="coins"><span class="coin-ico">◉</span><span id="coins-value">0</span></div>
+
+    <!-- Top-right buttons -->
     <button id="mute" data-ui-button aria-label="Mute">🔊</button>
+    <button id="shop-btn" data-ui-button aria-label="Shop">🛍️</button>
 
     <!-- Milestone "+10!" banner -->
     <div id="milestone">+10! ★</div>
@@ -65,10 +69,14 @@
             <div class="stat-value gold" id="go-best">0</div>
           </div>
         </div>
+        <div class="go-coins-row"><span class="coin-ico">◉</span> +<span id="go-coins">0</span> coins this run</div>
 
         <div class="cta pulse">Tap to Soar Again</div>
       </div>
     </div>
+
+    <!-- Shop overlay (contents built by js/shop.js) -->
+    <div id="shop" class="hidden"></div>
 
     <!-- Cinematic intro hint -->
     <div id="intro"></div>

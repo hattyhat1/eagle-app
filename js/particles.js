@@ -7,6 +7,7 @@
 
 import * as THREE from 'three';
 import { COLORS, SPECTACLE } from './constants.js';
+import { TRAILS } from './cosmetics.js';
 
 const RWB = [COLORS.RED, COLORS.WHITE, COLORS.BLUE, COLORS.GOLD];
 
@@ -37,7 +38,12 @@ export class ParticleSystem {
     this._sphereGeo = new THREE.SphereGeometry(0.12, 8, 6);
     this._confettiGeo = new THREE.PlaneGeometry(0.18, 0.28);
     this._featherGeo = new THREE.BoxGeometry(0.28, 0.08, 0.04);
+    this._stripeGeo = new THREE.PlaneGeometry(0.3, 0.12);
+
+    this.trailStyle = TRAILS[0];
   }
+
+  setTrailStyle(trail) { this.trailStyle = trail || TRAILS[0]; }
 
   _makeStarGeometry() {
     const shape = new THREE.Shape();
@@ -138,16 +144,37 @@ export class ParticleSystem {
     }
   }
 
-  // Red/white/blue streamer trail behind the eagle.
+  // Streamer trail behind the eagle — styled by the equipped trail cosmetic.
   trail(pos) {
     if (!SPECTACLE.trail) return;
-    const p = this._acquire(this._sphereGeo, RWB[Math.floor(Math.random() * 3)]);
+    const style = this.trailStyle;
+    const colors = style.colors;
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    const geo = style.shape === 'star' ? this._starGeo
+      : style.shape === 'stripe' ? this._stripeGeo : this._sphereGeo;
+    const p = this._acquire(geo, color);
     p.mesh.position.copy(pos);
     p.mesh.position.z = (Math.random() - 0.5) * 0.6;
     p.vel.set(-1.5, (Math.random() - 0.5) * 0.6, 0);
     p.gravity = 0;
+    p.spin.set(0, 0, style.shape !== 'sphere' ? (Math.random() - 0.5) * 6 : 0);
     p.life = 0; p.maxLife = 0.6; p.fade = true;
     p.mesh.scale.setScalar(0.5 + Math.random() * 0.4);
+  }
+
+  // Sparkle burst when collecting a coin.
+  coinPickup(pos) {
+    for (let i = 0; i < 7; i++) {
+      const p = this._acquire(this._starGeo, i % 2 ? COLORS.GOLD : 0xfff2b0);
+      p.mesh.position.copy(pos);
+      const a = (i / 7) * Math.PI * 2;
+      const sp = 2 + Math.random() * 2;
+      p.vel.set(Math.cos(a) * sp, Math.sin(a) * sp + 1.5, 0);
+      p.gravity = -5;
+      p.spin.set(0, 0, (Math.random() - 0.5) * 14);
+      p.life = 0; p.maxLife = 0.5; p.fade = true;
+      p.mesh.scale.setScalar(0.6 + Math.random() * 0.4);
+    }
   }
 
   // Firework shell explosion at pos.

@@ -180,6 +180,24 @@ export class AudioManager {
     this.crowdCheer(0.3);
   }
 
+  coin() {
+    // Bright two-note coin ping.
+    this._tone({ freq: 1320, type: 'square', dur: 0.06, gain: 0.12 });
+    this._tone({ freq: 1760, type: 'square', start: 0.05, dur: 0.1, gain: 0.12 });
+  }
+
+  purchase() {
+    // Cha-ching: ascending sparkle.
+    [880, 1175, 1568].forEach((f, i) => this._tone({
+      freq: f, type: 'triangle', start: i * 0.07, dur: 0.14, gain: 0.16,
+    }));
+    this._tone({ freq: 2349, type: 'sine', start: 0.18, dur: 0.18, gain: 0.1 });
+  }
+
+  denied() {
+    this._tone({ freq: 220, freqEnd: 160, type: 'sawtooth', dur: 0.15, gain: 0.14 });
+  }
+
   collision() {
     this._tone({ freq: 200, freqEnd: 50, type: 'sawtooth', dur: 0.25, gain: 0.3 });
     this._noise({ dur: 0.3, gain: 0.25, type: 'lowpass', freq: 800 });
