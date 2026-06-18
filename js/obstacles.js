@@ -71,6 +71,7 @@ export class ObstacleManager {
     this.spawnTimer = 0;
     this.speed = OBSTACLES.SPEED_START;
     this.gap = OBSTACLES.GAP_START;
+    this.vRange = OBSTACLES.VRANGE_START;
     this.running = false;
     this.onScore = null;
     this.onSpawn = null;        // callback(x, gapCenter) — used to place coins
@@ -214,8 +215,7 @@ export class ObstacleManager {
   }
 
   spawnPair() {
-    const range = OBSTACLES.GAP_VERTICAL_RANGE;
-    const gapCenter = (Math.random() * 2 - 1) * range * 0.5 + 0.5;
+    const gapCenter = (Math.random() * 2 - 1) * this.vRange * 0.5 + 0.5;
     const pair = this._acquirePair();
     pair.scored = false;
     pair.gapCenter = gapCenter;
@@ -233,6 +233,7 @@ export class ObstacleManager {
     this.spawnTimer = 0.6;
     this.speed = OBSTACLES.SPEED_START;
     this.gap = OBSTACLES.GAP_START;
+    this.vRange = OBSTACLES.VRANGE_START;
   }
 
   stop() { this.running = false; }
@@ -251,6 +252,8 @@ export class ObstacleManager {
       OBSTACLES.SPEED_START + steps * OBSTACLES.SPEED_GROWTH_PER_5);
     this.gap = Math.max(OBSTACLES.GAP_MIN,
       OBSTACLES.GAP_START - steps * OBSTACLES.GAP_SHRINK_PER_5);
+    this.vRange = Math.min(OBSTACLES.VRANGE_MAX,
+      OBSTACLES.VRANGE_START + steps * OBSTACLES.VRANGE_GROWTH_PER_5);
   }
 
   update(dt, eagle, timeScale = 1) {

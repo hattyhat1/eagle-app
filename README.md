@@ -94,6 +94,8 @@ eagle-app/
   - **Worlds** — 5 backgrounds: Golden Sunrise, Sunset, Fireworks Night, Space, Winter
   - **Trails** — 5 styles: Star Spangle, Fire, Rainbow, Ribbon, Golden Glow
   - **Pillars** — 5 styles: Flag Stripes, Marble, Solid Gold, Candy Cane, Neon
+  - **Coins** — 9 collectible looks: Gold/Bronze/Silver stars, Eagle Medal, and
+    faceted gems (Ruby, Emerald, Sapphire, Diamond, Amethyst)
 - The first item in every category is **free and equipped by default**.
 - Everything you own/equip persists in `localStorage` and applies instantly.
 

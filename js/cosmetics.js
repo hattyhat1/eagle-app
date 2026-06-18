@@ -89,6 +89,31 @@ export const PILLARS = [
 ];
 
 // ---------------------------------------------------------------------------
+//  COIN SKINS — the look of the collectible pickup.
+//  shape: 'coin' (disc + embossed star) or 'gem' (faceted jewel).
+// ---------------------------------------------------------------------------
+export const COIN_SKINS = [
+  { id: 'gold', name: 'Gold Star', price: 0, shape: 'coin',
+    disc: 0xffcf40, discEm: 0xffb000, star: 0xfff2b0, starEm: 0xffcf40 },
+  { id: 'bronze', name: 'Bronze', price: 80, shape: 'coin',
+    disc: 0xc8843c, discEm: 0x7a3f12, star: 0xe6b070, starEm: 0xc8843c },
+  { id: 'silver', name: 'Silver', price: 120, shape: 'coin',
+    disc: 0xd2dae6, discEm: 0x8a93a3, star: 0xffffff, starEm: 0xd2dae6 },
+  { id: 'eagle', name: 'Eagle Medal', price: 350, shape: 'coin',
+    disc: 0xffcf40, discEm: 0xe0a727, star: 0xc8102e, starEm: 0x8a0b20 },
+  { id: 'ruby', name: 'Ruby', price: 260, shape: 'gem',
+    disc: 0xff4d6a, discEm: 0xc8102e, star: 0xffd0d8, starEm: 0xff4d6a },
+  { id: 'emerald', name: 'Emerald', price: 260, shape: 'gem',
+    disc: 0x4be08a, discEm: 0x1f8a4d, star: 0xd6ffe6, starEm: 0x4be08a },
+  { id: 'sapphire', name: 'Sapphire', price: 300, shape: 'gem',
+    disc: 0x4d8aff, discEm: 0x2b56c6, star: 0xd0e0ff, starEm: 0x4d8aff },
+  { id: 'diamond', name: 'Diamond', price: 450, shape: 'gem',
+    disc: 0xaef0ff, discEm: 0x39e6ff, star: 0xffffff, starEm: 0xaef0ff },
+  { id: 'amethyst', name: 'Amethyst', price: 320, shape: 'gem',
+    disc: 0xb47bff, discEm: 0x7a2fd0, star: 0xeaddff, starEm: 0xb47bff },
+];
+
+// ---------------------------------------------------------------------------
 //  CATEGORY REGISTRY — used by the shop & store.
 // ---------------------------------------------------------------------------
 export const CATALOG = {
@@ -96,6 +121,7 @@ export const CATALOG = {
   background: { label: 'Worlds', items: BACKGROUNDS },
   trail: { label: 'Trails', items: TRAILS },
   pillar: { label: 'Pillars', items: PILLARS },
+  coin: { label: 'Coins', items: COIN_SKINS },
 };
 
 export function getItem(category, id) {

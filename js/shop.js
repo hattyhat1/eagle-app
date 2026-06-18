@@ -47,7 +47,8 @@ export class ShopUI {
 
     const tabs = [
       ['eagle', '🦅 Eagles'], ['background', '🌅 Worlds'],
-      ['trail', '✨ Trails'], ['pillar', '🏛 Pillars'], ['coins', '◉ Coins'],
+      ['trail', '✨ Trails'], ['pillar', '🏛 Pillars'],
+      ['coin', '🪙 Coins'], ['buy', '💳 Get Coins'],
     ];
     for (const [id, label] of tabs) {
       const b = document.createElement('button');
@@ -87,7 +88,7 @@ export class ShopUI {
   _selectTab(tab) {
     this.activeTab = tab;
     for (const b of this.elTabs.children) b.classList.toggle('active', b.dataset.tab === tab);
-    if (tab === 'coins') this._renderCoins();
+    if (tab === 'buy') this._renderCoins();
     else this._renderCategory(tab);
   }
 
@@ -165,6 +166,13 @@ export class ShopUI {
     if (category === 'trail') {
       const dots = item.colors.map((c) => `<span class="pv-dot" style="background:${cssHex(c)}"></span>`).join('');
       return `<div class="pv-trail">${dots}</div>`;
+    }
+    if (category === 'coin') {
+      if (item.shape === 'gem') {
+        return `<div class="pv-gem" style="background:${cssHex(item.disc)}"></div>`;
+      }
+      return `<div class="pv-coin" style="background:${cssHex(item.disc)}">
+                <span class="pv-coinstar" style="color:${cssHex(item.star)}">★</span></div>`;
     }
     if (category === 'pillar') {
       const map = {

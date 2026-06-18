@@ -7,6 +7,7 @@
 
 import * as THREE from 'three';
 import { WORLD, BLOOM_LAYER } from './constants.js';
+import { COIN_SKINS } from './cosmetics.js';
 
 const COIN_VALUE = 5;        // coins awarded per pickup (1 coin/pillar now)
 const COIN_RADIUS = 0.42;
@@ -14,23 +15,38 @@ const PICKUP_RADIUS = 0.95;  // generous collection range
 const MAGNET_RANGE = 2.4;    // coins drift toward a nearby eagle
 
 export class CoinManager {
-  constructor(scene) {
+  constructor(scene, skin) {
     this.scene = scene;
     this.coins = [];
     this.pool = [];
     this.onCollect = null;     // callback(value, position)
+    this.shape = 'coin';
 
-    // Shared coin mesh: a gold disc with an embossed star, edge ring.
-    this.geo = new THREE.CylinderGeometry(COIN_RADIUS, COIN_RADIUS, 0.1, 20);
-    this.mat = new THREE.MeshStandardMaterial({
-      color: 0xffcf40, metalness: 0.5, roughness: 0.2,
-      emissive: 0xffb000, emissiveIntensity: 0.25,
-    });
+    this.discGeo = new THREE.CylinderGeometry(COIN_RADIUS, COIN_RADIUS, 0.1, 20);
+    this.gemGeo = new THREE.OctahedronGeometry(COIN_RADIUS * 1.05, 0);
     this.starGeo = this._starGeo();
-    this.starMat = new THREE.MeshStandardMaterial({
-      color: 0xfff2b0, metalness: 0.4, roughness: 0.25,
-      emissive: 0xffcf40, emissiveIntensity: 0.3,
-    });
+    this.mat = new THREE.MeshStandardMaterial({ metalness: 0.5, roughness: 0.2 });
+    this.starMat = new THREE.MeshStandardMaterial({ metalness: 0.4, roughness: 0.25 });
+
+    this.applySkin(skin || COIN_SKINS[0]);
+  }
+
+  // Recolour/reshape the collectible. Rebuilds the pool so the new look
+  // (especially gem vs coin shape) takes effect on the next coins.
+  applySkin(skin) {
+    this.skin = skin;
+    this.shape = skin.shape;
+    this.mat.color.setHex(skin.disc);
+    this.mat.emissive.setHex(skin.discEm || 0x000000);
+    this.mat.emissiveIntensity = 0.3;
+    this.mat.metalness = skin.shape === 'gem' ? 0.1 : 0.5;
+    this.mat.roughness = skin.shape === 'gem' ? 0.1 : 0.2;
+    this.starMat.color.setHex(skin.star || 0xffffff);
+    this.starMat.emissive.setHex(skin.starEm || 0x000000);
+    this.starMat.emissiveIntensity = 0.35;
+    // Drop pooled meshes so they rebuild with the right shape.
+    for (const c of this.pool) this.scene.remove(c.group);
+    this.pool.length = 0;
   }
 
   _starGeo() {
@@ -52,14 +68,21 @@ export class CoinManager {
     let c = this.pool.pop();
     if (!c) {
       const group = new THREE.Group();
-      const disc = new THREE.Mesh(this.geo, this.mat);
-      disc.rotation.x = Math.PI / 2; // face the camera
-      disc.layers.enable(BLOOM_LAYER);
-      group.add(disc);
-      const star = new THREE.Mesh(this.starGeo, this.starMat);
-      star.position.z = 0.05;
-      star.layers.enable(BLOOM_LAYER);
-      group.add(star);
+      if (this.shape === 'gem') {
+        const gem = new THREE.Mesh(this.gemGeo, this.mat);
+        gem.scale.set(1, 1.3, 1);
+        gem.layers.enable(BLOOM_LAYER);
+        group.add(gem);
+      } else {
+        const disc = new THREE.Mesh(this.discGeo, this.mat);
+        disc.rotation.x = Math.PI / 2; // face the camera
+        disc.layers.enable(BLOOM_LAYER);
+        group.add(disc);
+        const star = new THREE.Mesh(this.starGeo, this.starMat);
+        star.position.z = 0.05;
+        star.layers.enable(BLOOM_LAYER);
+        group.add(star);
+      }
       this.scene.add(group);
       c = { group, collected: false, bob: 0 };
     }

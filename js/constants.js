@@ -124,13 +124,16 @@ export const EAGLE = Object.freeze({
 export const OBSTACLES = Object.freeze({
   WIDTH: 1.7,             // pillar diameter
   GAP_START: 4.6,         // initial vertical gap (~3.3x eagle height)
-  GAP_MIN: 3.2,           // smallest the gap will shrink to
-  GAP_SHRINK_PER_5: 0.18, // gap reduction applied every 5 points
+  GAP_MIN: 2.7,           // smallest the gap will shrink to (still ~2x eagle)
+  GAP_SHRINK_PER_5: 0.26, // gap reduction applied every 5 points (steeper)
   SPEED_START: 6.0,       // world scroll speed
-  SPEED_MAX: 10.5,
-  SPEED_GROWTH_PER_5: 0.35, // speed bump every 5 points
+  SPEED_MAX: 12.5,        // faster top speed
+  SPEED_GROWTH_PER_5: 0.5, // speed bump every 5 points (steeper)
   SPAWN_INTERVAL: 1.7,    // seconds between spawns (at start speed)
-  GAP_VERTICAL_RANGE: 4.2, // how far the gap center can wander up/down
+  // Gap-center wander widens with score, so gaps swing higher/lower later on.
+  VRANGE_START: 3.0,      // gentle vertical placement early
+  VRANGE_MAX: 5.8,        // wild placement once you're deep in
+  VRANGE_GROWTH_PER_5: 0.32,
   COLLISION_INSET: 0.18,  // shrink collision box for fairness
 });
 

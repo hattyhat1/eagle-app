@@ -8,7 +8,7 @@
 import { CATALOG, getItem, getCoinPack } from './cosmetics.js';
 
 const SAVE_KEY = 'americanEagle.save.v2';
-const CATEGORIES = ['eagle', 'background', 'trail', 'pillar'];
+const CATEGORIES = ['eagle', 'background', 'trail', 'pillar', 'coin'];
 
 export class PlayerStore {
   constructor() {

@@ -156,7 +156,7 @@ export class GameManager {
     this.obstacles.onScore = () => this._onScore();
     this.obstacles.onSpawn = (x, gapCenter) => this.coins.spawnArc(x, gapCenter);
 
-    this.coins = new CoinManager(this.scene);
+    this.coins = new CoinManager(this.scene, eq('coin'));
     this.coins.onCollect = (value, pos) => this._onCoin(value, pos);
 
     this.audio = new AudioManager();
@@ -219,6 +219,7 @@ export class GameManager {
     if (category === 'eagle') this.eagle.applySkin(item);
     else if (category === 'trail') this.particles.setTrailStyle(item);
     else if (category === 'pillar') this.obstacles.setStyle(item);
+    else if (category === 'coin') this.coins.applySkin(item);
     else if (category === 'background') {
       this.environment.setTheme(item);
       this._applyThemeLighting(item);
