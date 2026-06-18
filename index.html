@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#16307a" />
+  <title>American Eagle — 3D Flappy Flight</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- 3D render target -->
+  <canvas id="game-canvas"></canvas>
+
+  <!-- ===================== UI OVERLAY ===================== -->
+  <div id="ui">
+
+    <!-- Big arcade score -->
+    <div id="score" class="hidden">0</div>
+
+    <!-- Mute toggle -->
+    <button id="mute" data-ui-button aria-label="Mute">🔊</button>
+
+    <!-- Milestone "+10!" banner -->
+    <div id="milestone">+10! ★</div>
+
+    <!-- ===================== START MENU ===================== -->
+    <div id="menu">
+      <div class="banner">
+        <div class="banner-cloth">
+          <h1 class="title">
+            <span class="title-line">AMERICAN EAGLE</span>
+            <span class="subtitle">3D&nbsp;FLAPPY&nbsp;FLIGHT</span>
+          </h1>
+        </div>
+      </div>
+
+      <div class="best-badge">
+        <span class="star">★</span>
+        <div class="best-inner">
+          <div class="best-label">BEST</div>
+          <div class="best-value"><span id="menu-best">0</span></div>
+        </div>
+      </div>
+
+      <div class="cta pulse">Tap to Take Flight</div>
+      <div class="hint">Tap&nbsp;/&nbsp;Click&nbsp;/&nbsp;Space to flap</div>
+    </div>
+
+    <!-- ===================== GAME OVER ===================== -->
+    <div id="gameover" class="hidden">
+      <div class="shield">
+        <div id="new-record" class="record-banner hidden">★ NEW RECORD! ★</div>
+        <h2 id="go-title" class="go-title">GAME&nbsp;OVER</h2>
+
+        <div class="go-stats">
+          <div class="stat">
+            <div class="stat-label">SCORE</div>
+            <div class="stat-value" id="go-score">0</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">BEST</div>
+            <div class="stat-value gold" id="go-best">0</div>
+          </div>
+        </div>
+
+        <div class="cta pulse">Tap to Soar Again</div>
+      </div>
+    </div>
+
+    <!-- Cinematic intro hint -->
+    <div id="intro"></div>
+
+    <!-- White flash for new-record / impact -->
+    <div id="flash"></div>
+
+    <!-- Star-spangled transition wipe -->
+    <div id="transition" class="hidden">
+      <div class="wipe wipe-red"></div>
+      <div class="wipe wipe-white"></div>
+      <div class="wipe wipe-blue"></div>
+      <div class="wipe-star">★</div>
+    </div>
+  </div>
+
+  <!-- Three.js via import map (no build step required) -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "./vendor/three.module.js"
+    }
+  }
+  </script>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
