@@ -72,7 +72,9 @@ export class GameManager {
     this.renderer = new THREE.WebGLRenderer({
       canvas: this.canvas, antialias: true, powerPreference: 'high-performance',
     });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    // Cap device pixel ratio at 1.5: high-DPI phones render far fewer pixels
+    // this way (a big FPS win) with little visible loss.
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     // ACES is applied once: by OutputPass at the end of the composer chain, or
@@ -105,9 +107,9 @@ export class GameManager {
     this.sun = new THREE.DirectionalLight(0xfff0c8, 1.2);
     this.sun.position.set(6, 14, 10);
     this.sun.castShadow = true;
-    this.sun.shadow.mapSize.set(2048, 2048);
-    this.sun.shadow.radius = 5;            // softer PCF edges
-    this.sun.shadow.bias = -0.0004;
+    this.sun.shadow.mapSize.set(1024, 1024); // 1K shadows — much cheaper than 2K
+    this.sun.shadow.radius = 3;              // softer PCF edges
+    this.sun.shadow.bias = -0.0005;
     this.sun.shadow.camera.left = -14; this.sun.shadow.camera.right = 14;
     this.sun.shadow.camera.top = 14; this.sun.shadow.camera.bottom = -14;
     this.sun.shadow.camera.near = 1; this.sun.shadow.camera.far = 50;
@@ -194,7 +196,7 @@ export class GameManager {
     this.camera.position.z = portrait ? WORLD.CAMERA_Z + 7 : WORLD.CAMERA_Z;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     if (this.postfx) this.postfx.setSize(w, h);
   }
 
@@ -447,7 +449,7 @@ export class GameManager {
     if (this.trailTimer <= 0) {
       this.eagle.getTrailAnchor(this._tmp);
       this.particles.trail(this._tmp);
-      this.trailTimer = 0.04;
+      this.trailTimer = 0.07; // thinner trail -> fewer live particles
     }
 
     const hit = this._checkCollisions();

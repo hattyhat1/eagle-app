@@ -174,8 +174,8 @@ export class Environment {
       this.root.add(cloud);
       this.clouds.push(cloud);
     };
-    for (let i = 0; i < 5; i++) mkCloud((Math.random() - 0.5) * 50, 4 + Math.random() * 4, -16, 1.1);
-    for (let i = 0; i < 5; i++) mkCloud((Math.random() - 0.5) * 50, 3 + Math.random() * 5, -10, 1.5);
+    for (let i = 0; i < 4; i++) mkCloud((Math.random() - 0.5) * 50, 4 + Math.random() * 4, -16, 1.1);
+    for (let i = 0; i < 4; i++) mkCloud((Math.random() - 0.5) * 50, 3 + Math.random() * 5, -10, 1.5);
   }
 
   _buildBalloons() {
@@ -215,7 +215,8 @@ export class Environment {
   }
 
   _buildFlags() {
-    for (let x = -30, idx = 0; x <= 30; x += 5, idx++) {
+    // Wider spacing -> fewer flags -> fewer per-frame cloth updates.
+    for (let x = -28, idx = 0; x <= 28; x += 8, idx++) {
       const flag = new THREE.Group();
       const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 2.2, 6),
         new THREE.MeshStandardMaterial({ color: COLORS.GOLD_DEEP, metalness: 0.4 }));
@@ -296,6 +297,8 @@ export class Environment {
   // --------------------------------------------------------------------------
   update(dt) {
     this.time += dt;
+    this._frame = (this._frame || 0) + 1;
+    const heavyTick = this._frame % 2 === 0; // cloth/snow updates every other frame
 
     for (const c of this.clouds) {
       c.position.x -= c.userData.speed * dt;
@@ -309,24 +312,26 @@ export class Environment {
     if (this.rays) this.rays.rotation.z += dt * 0.05;
     if (this.stars) this.stars.material.opacity = 0.7 + Math.sin(this.time * 2) * 0.25;
 
-    if (this.snow) {
+    if (this.snow && heavyTick) {
       const p = this.snow.geometry.attributes.position;
       for (let i = 0; i < p.count; i++) {
-        let y = p.getY(i) - dt * 1.4;
-        let x = p.getX(i) - dt * 0.6;
+        let y = p.getY(i) - dt * 2.8;
+        let x = p.getX(i) - dt * 1.2;
         if (y < -7) { y = 17; x = (Math.random() - 0.5) * 40; }
         p.setY(i, y); p.setX(i, x);
       }
       p.needsUpdate = true;
     }
 
-    for (const f of this.flags) {
-      const pos = f.userData.cloth.geometry.attributes.position;
-      for (let i = 0; i < pos.count; i++) {
-        const x = pos.getX(i);
-        pos.setZ(i, Math.sin((x + this.time * 3 + f.userData.phase) * 2.5) * 0.12 * Math.max(0, x));
+    if (heavyTick) {
+      for (const f of this.flags) {
+        const pos = f.userData.cloth.geometry.attributes.position;
+        for (let i = 0; i < pos.count; i++) {
+          const x = pos.getX(i);
+          pos.setZ(i, Math.sin((x + this.time * 3 + f.userData.phase) * 2.5) * 0.12 * Math.max(0, x));
+        }
+        pos.needsUpdate = true;
       }
-      pos.needsUpdate = true;
     }
   }
 }

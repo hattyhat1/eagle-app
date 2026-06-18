@@ -8,7 +8,7 @@
 import * as THREE from 'three';
 import { WORLD, BLOOM_LAYER } from './constants.js';
 
-const COIN_VALUE = 2;        // coins awarded per pickup
+const COIN_VALUE = 5;        // coins awarded per pickup (1 coin/pillar now)
 const COIN_RADIUS = 0.42;
 const PICKUP_RADIUS = 0.95;  // generous collection range
 const MAGNET_RANGE = 2.4;    // coins drift toward a nearby eagle
@@ -77,16 +77,11 @@ export class CoinManager {
     this.pool.push(c);
   }
 
-  // Spawn a small vertical arc of coins centered on a pillar gap.
+  // Spawn a single coin in the pillar gap (kept light to reduce clutter/lag).
   spawnArc(x, gapCenter) {
-    const n = 3;
-    const spread = 1.0;
-    for (let i = 0; i < n; i++) {
-      const c = this._acquire();
-      const y = gapCenter + (i - (n - 1) / 2) * spread;
-      c.group.position.set(x, y, 0.4);
-      c.bob = Math.random() * Math.PI * 2;
-    }
+    const c = this._acquire();
+    c.group.position.set(x, gapCenter, 0.4);
+    c.bob = Math.random() * Math.PI * 2;
   }
 
   start() { this.clear(); }
